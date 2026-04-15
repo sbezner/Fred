@@ -268,8 +268,8 @@
     </section>
 
     <section>
-      <h2>ML Community Picks <span class="badge">r/MachineLearning · Today</span></h2>
-      <div id="reddit-list" class="list"></div>
+      <h2>Community Picks <span class="badge">dev.to · AI tag</span></h2>
+      <div id="devto-list" class="list"></div>
     </section>
 
     <footer>
@@ -316,18 +316,22 @@
       `).join('');
     }
 
-    async function fetchHN() {
-      const since = Math.floor(Date.now() / 1000) - 86400;
-      const query = AI_QUERIES.join(' OR ');
+    const AI_REGEX = /\b(ai|a\.i\.|llm|llms|gpt|claude|anthropic|openai|gemini|ml|machine learning|neural|transformer|genai|agentic|rag|mistral|deepseek|llama|sora|diffusion|stable diffusion|chatgpt|copilot)\b/i;
+
+    async function fetchHNWithin(seconds) {
+      const since = Math.floor(Date.now() / 1000) - seconds;
+      // advancedSyntax=true enables OR operator; quoted terms match phrases.
+      const query = AI_QUERIES.map(q => q.includes(' ') ? `"${q}"` : q).join(' OR ');
       const url = `https://hn.algolia.com/api/v1/search?query=${encodeURIComponent(query)}`
-        + `&tags=story&numericFilters=created_at_i>${since}&hitsPerPage=12`;
+        + `&advancedSyntax=true&tags=story`
+        + `&numericFilters=created_at_i>${since}&hitsPerPage=30`;
       const res = await fetch(url);
       if (!res.ok) throw new Error(`HN ${res.status}`);
       const data = await res.json();
       return (data.hits || [])
         .filter(h => h.title && (h.url || h.objectID))
+        .filter(h => AI_REGEX.test(h.title)) // guard against false positives
         .sort((a, b) => (b.points || 0) - (a.points || 0))
-        .slice(0, 8)
         .map(h => ({
           title: h.title,
           url: h.url || `https://news.ycombinator.com/item?id=${h.objectID}`,
@@ -338,30 +342,50 @@
         }));
     }
 
-    async function fetchReddit() {
-      const url = 'https://www.reddit.com/r/MachineLearning/top.json?t=day&limit=10';
+    async function fetchHN() {
+      // Widen the window if we don't find enough recent stories.
+      const windows = [86400, 2 * 86400, 3 * 86400];
+      let items = [];
+      let windowUsed = 86400;
+      for (const w of windows) {
+        items = await fetchHNWithin(w);
+        windowUsed = w;
+        if (items.length >= 5) break;
+      }
+      return { items: items.slice(0, 8), windowHours: Math.round(windowUsed / 3600) };
+    }
+
+    async function fetchDevTo() {
+      // `top=7` = top articles from the last 7 days (dev.to param is in days).
+      const url = 'https://dev.to/api/articles?tag=ai&top=7&per_page=20';
       const res = await fetch(url);
-      if (!res.ok) throw new Error(`Reddit ${res.status}`);
+      if (!res.ok) throw new Error(`dev.to ${res.status}`);
       const data = await res.json();
-      return (data.data?.children || [])
-        .map(c => c.data)
-        .filter(p => !p.stickied)
+      return (data || [])
+        .filter(a => a.title && a.url)
+        .sort((a, b) => (b.positive_reactions_count || 0) - (a.positive_reactions_count || 0))
         .slice(0, 8)
-        .map(p => ({
-          title: p.title,
-          url: p.url_overridden_by_dest || `https://www.reddit.com${p.permalink}`,
-          score: p.score,
-          comments: p.num_comments,
-          created: p.created_utc,
-          flair: p.link_flair_text,
-          permalink: `https://www.reddit.com${p.permalink}`,
+        .map(a => ({
+          title: a.title,
+          url: a.url,
+          reactions: a.positive_reactions_count || 0,
+          comments: a.comments_count || 0,
+          created: Math.floor(new Date(a.published_at).getTime() / 1000),
+          author: a.user?.name || a.user?.username || '',
+          tag: (a.tag_list && a.tag_list[0]) || '',
         }));
     }
 
-    function renderHN(items) {
+    function renderHN(result) {
       const el = document.getElementById('hn-list');
+      const items = result.items || [];
+      // Update the section badge to reflect the actual window used.
+      const badge = document.querySelector('#hn-list').closest('section').querySelector('.badge');
+      if (badge && result.windowHours) {
+        badge.textContent = `Hacker News · ${result.windowHours}h`;
+      }
       if (!items.length) {
-        el.innerHTML = '<div class="empty">No AI stories in the last 24 hours.</div>';
+        el.innerHTML = '<div class="empty">No AI stories found on Hacker News right now.</div>';
         return;
       }
       el.innerHTML = items.map(i => `
@@ -378,20 +402,20 @@
       `).join('');
     }
 
-    function renderReddit(items) {
-      const el = document.getElementById('reddit-list');
+    function renderDevTo(items) {
+      const el = document.getElementById('devto-list');
       if (!items.length) {
-        el.innerHTML = '<div class="empty">No posts available.</div>';
+        el.innerHTML = '<div class="empty">No articles available.</div>';
         return;
       }
       el.innerHTML = items.map(i => `
         <div class="card">
           <a class="title" href="${escapeHtml(i.url)}" target="_blank" rel="noopener">${escapeHtml(i.title)}</a>
           <div class="meta">
-            ${i.flair ? `<span class="badge">${escapeHtml(i.flair)}</span>` : ''}
-            <span>▲ ${i.score}</span>
+            ${i.author ? `<span>by ${escapeHtml(i.author)}</span><span class="dot">·</span>` : ''}
+            <span>♥ ${i.reactions}</span>
             <span class="dot">·</span>
-            <a href="${escapeHtml(i.permalink)}" target="_blank" rel="noopener">${i.comments} comments</a>
+            <span>${i.comments} comments</span>
             <span class="dot">·</span>
             <span>${timeAgo(i.created)}</span>
           </div>
@@ -404,9 +428,9 @@
         `<div class="error">Couldn't load: ${escapeHtml(msg)}</div>`;
     }
 
-    function saveCache(hn, reddit) {
+    function saveCache(hn, devto) {
       try {
-        localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), hn, reddit }));
+        localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), hn, devto }));
       } catch {}
     }
 
@@ -426,9 +450,9 @@
 
       if (!force) {
         const cached = loadCache();
-        if (cached) {
+        if (cached && cached.hn && cached.devto) {
           renderHN(cached.hn);
-          renderReddit(cached.reddit);
+          renderDevTo(cached.devto);
           document.getElementById('last-updated').textContent =
             `Cached · updated ${timeAgo(Math.floor(cached.ts / 1000))}`;
           return;
@@ -437,18 +461,18 @@
 
       btn.classList.add('spinning');
       showSkeleton('hn-list', 5);
-      showSkeleton('reddit-list', 5);
+      showSkeleton('devto-list', 5);
 
-      const [hnRes, redditRes] = await Promise.allSettled([fetchHN(), fetchReddit()]);
+      const [hnRes, devtoRes] = await Promise.allSettled([fetchHN(), fetchDevTo()]);
 
-      let hn = [], reddit = [];
+      let hn = { items: [], windowHours: 24 }, devto = [];
       if (hnRes.status === 'fulfilled') { hn = hnRes.value; renderHN(hn); }
       else renderError('hn-list', hnRes.reason?.message || 'network error');
 
-      if (redditRes.status === 'fulfilled') { reddit = redditRes.value; renderReddit(reddit); }
-      else renderError('reddit-list', redditRes.reason?.message || 'network error');
+      if (devtoRes.status === 'fulfilled') { devto = devtoRes.value; renderDevTo(devto); }
+      else renderError('devto-list', devtoRes.reason?.message || 'network error');
 
-      if (hn.length || reddit.length) saveCache(hn, reddit);
+      if ((hn.items && hn.items.length) || devto.length) saveCache(hn, devto);
 
       document.getElementById('last-updated').textContent =
         `Updated ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
