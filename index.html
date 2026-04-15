@@ -3,9 +3,459 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hello Fred</title>
+  <title>Fred's Daily AI Briefing</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A4%96%3C/text%3E%3C/svg%3E">
+  <style>
+    :root {
+      --bg: #0e1116;
+      --bg-gradient: radial-gradient(1200px 600px at 50% -200px, #1a2030 0%, transparent 70%);
+      --panel: #161b22;
+      --panel-hover: #1c232c;
+      --border: #30363d;
+      --border-strong: #484f58;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --accent: #58a6ff;
+      --accent-hover: #79b8ff;
+      --tag: #1f6feb33;
+      --tag-text: #79b8ff;
+      --error: #f85149;
+      --shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #f6f8fa;
+        --bg-gradient: radial-gradient(1200px 600px at 50% -200px, #dfe7ef 0%, transparent 70%);
+        --panel: #ffffff;
+        --panel-hover: #f6f8fa;
+        --border: #d0d7de;
+        --border-strong: #afb8c1;
+        --text: #1f2328;
+        --muted: #59636e;
+        --accent: #0969da;
+        --accent-hover: #0550ae;
+        --tag: #0969da22;
+        --tag-text: #0969da;
+        --error: #cf222e;
+        --shadow: 0 1px 3px rgba(0,0,0,0.08);
+      }
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body { height: 100%; }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      background-image: var(--bg-gradient);
+      color: var(--text);
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .container {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 40px 20px 80px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 24px;
+      margin-bottom: 28px;
+    }
+
+    .logo {
+      width: 52px;
+      height: 52px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #58a6ff, #8b5cf6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      box-shadow: var(--shadow);
+      flex-shrink: 0;
+    }
+
+    .header-text { flex: 1; min-width: 0; }
+
+    h1 {
+      margin: 0 0 4px 0;
+      font-size: 1.6rem;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    section { margin-top: 32px; }
+
+    h2 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      margin: 0 0 14px 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    h2 .badge {
+      font-size: 0.68rem;
+      font-weight: 500;
+      color: var(--tag-text);
+      background: var(--tag);
+      padding: 3px 9px;
+      border-radius: 999px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      transition: border-color 0.15s ease, transform 0.15s ease, background 0.15s ease;
+      animation: fadeUp 0.3s ease both;
+    }
+
+    .card:hover {
+      border-color: var(--border-strong);
+      background: var(--panel-hover);
+    }
+
+    .card:nth-child(1) { animation-delay: 0ms; }
+    .card:nth-child(2) { animation-delay: 40ms; }
+    .card:nth-child(3) { animation-delay: 80ms; }
+    .card:nth-child(4) { animation-delay: 120ms; }
+    .card:nth-child(5) { animation-delay: 160ms; }
+    .card:nth-child(6) { animation-delay: 200ms; }
+    .card:nth-child(7) { animation-delay: 240ms; }
+    .card:nth-child(8) { animation-delay: 280ms; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .card a.title {
+      color: var(--text);
+      text-decoration: none;
+      font-weight: 600;
+      display: block;
+      margin-bottom: 6px;
+      line-height: 1.4;
+    }
+
+    .card a.title:hover { color: var(--accent); }
+
+    .meta {
+      color: var(--muted);
+      font-size: 0.82rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 14px;
+      align-items: center;
+    }
+
+    .meta a { color: var(--muted); text-decoration: none; }
+    .meta a:hover { color: var(--accent); }
+
+    .meta .dot { opacity: 0.4; }
+
+    .skeleton {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      overflow: hidden;
+      position: relative;
+    }
+    .skeleton-line {
+      height: 12px;
+      border-radius: 4px;
+      background: linear-gradient(90deg, var(--border) 0%, var(--border-strong) 50%, var(--border) 100%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+      margin-bottom: 8px;
+    }
+    .skeleton-line.short { width: 40%; height: 10px; margin-bottom: 0; }
+    @keyframes shimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    .error, .empty {
+      color: var(--muted);
+      font-style: italic;
+      padding: 14px 16px;
+      background: var(--panel);
+      border: 1px dashed var(--border);
+      border-radius: 10px;
+    }
+    .error { color: var(--error); border-color: var(--error); border-style: solid; opacity: 0.85; }
+
+    footer {
+      margin-top: 48px;
+      padding-top: 18px;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 0.82rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    button.refresh {
+      background: transparent;
+      color: var(--accent);
+      border: 1px solid var(--border);
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-family: inherit;
+      transition: border-color 0.15s ease, background 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    button.refresh:hover { border-color: var(--accent); background: var(--tag); }
+    button.refresh:active { transform: scale(0.97); }
+    button.refresh.spinning svg { animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 540px) {
+      .container { padding: 24px 16px 60px; }
+      h1 { font-size: 1.35rem; }
+      .logo { width: 44px; height: 44px; font-size: 24px; }
+      footer { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
 </head>
 <body>
-  <h1>Hello Fred</h1>
+  <div class="container">
+    <header>
+      <div class="logo" aria-hidden="true">🤖</div>
+      <div class="header-text">
+        <h1>Fred's Daily AI Briefing</h1>
+        <div class="subtitle" id="today-date">Loading…</div>
+      </div>
+    </header>
+
+    <section>
+      <h2>Top AI Stories <span class="badge">Hacker News · 24h</span></h2>
+      <div id="hn-list" class="list"></div>
+    </section>
+
+    <section>
+      <h2>ML Community Picks <span class="badge">r/MachineLearning · Today</span></h2>
+      <div id="reddit-list" class="list"></div>
+    </section>
+
+    <footer>
+      <span id="last-updated">—</span>
+      <button class="refresh" id="refresh-btn" onclick="loadAll(true)" aria-label="Refresh">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+          <path d="M8 2.5a5.5 5.5 0 1 0 5.465 6.165.75.75 0 0 1 1.49.17A7 7 0 1 1 13 3.5V2a.75.75 0 0 1 1.5 0v3.25a.75.75 0 0 1-.75.75H10.5a.75.75 0 0 1 0-1.5h1.878A5.487 5.487 0 0 0 8 2.5z"/>
+        </svg>
+        Refresh
+      </button>
+    </footer>
+  </div>
+
+  <script>
+    const CACHE_KEY = 'fred-ai-briefing';
+    const CACHE_TTL_MS = 30 * 60 * 1000; // 30 min
+    const AI_QUERIES = ['AI', 'LLM', 'GPT', 'Claude', 'Anthropic', 'OpenAI'];
+
+    const formatDate = (d) =>
+      d.toLocaleDateString(undefined, {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+      });
+
+    const timeAgo = (epochSec) => {
+      const diff = Math.floor(Date.now() / 1000 - epochSec);
+      if (diff < 60) return `${diff}s ago`;
+      if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+      if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+      return `${Math.floor(diff / 86400)}d ago`;
+    };
+
+    const escapeHtml = (s) =>
+      (s || '').replace(/[&<>"']/g, (c) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      })[c]);
+
+    function showSkeleton(id, n = 5) {
+      const el = document.getElementById(id);
+      el.innerHTML = Array.from({ length: n }).map(() => `
+        <div class="skeleton">
+          <div class="skeleton-line"></div>
+          <div class="skeleton-line short"></div>
+        </div>
+      `).join('');
+    }
+
+    async function fetchHN() {
+      const since = Math.floor(Date.now() / 1000) - 86400;
+      const query = AI_QUERIES.join(' OR ');
+      const url = `https://hn.algolia.com/api/v1/search?query=${encodeURIComponent(query)}`
+        + `&tags=story&numericFilters=created_at_i>${since}&hitsPerPage=12`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HN ${res.status}`);
+      const data = await res.json();
+      return (data.hits || [])
+        .filter(h => h.title && (h.url || h.objectID))
+        .sort((a, b) => (b.points || 0) - (a.points || 0))
+        .slice(0, 8)
+        .map(h => ({
+          title: h.title,
+          url: h.url || `https://news.ycombinator.com/item?id=${h.objectID}`,
+          points: h.points || 0,
+          comments: h.num_comments || 0,
+          created: h.created_at_i,
+          hnUrl: `https://news.ycombinator.com/item?id=${h.objectID}`,
+        }));
+    }
+
+    async function fetchReddit() {
+      const url = 'https://www.reddit.com/r/MachineLearning/top.json?t=day&limit=10';
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`Reddit ${res.status}`);
+      const data = await res.json();
+      return (data.data?.children || [])
+        .map(c => c.data)
+        .filter(p => !p.stickied)
+        .slice(0, 8)
+        .map(p => ({
+          title: p.title,
+          url: p.url_overridden_by_dest || `https://www.reddit.com${p.permalink}`,
+          score: p.score,
+          comments: p.num_comments,
+          created: p.created_utc,
+          flair: p.link_flair_text,
+          permalink: `https://www.reddit.com${p.permalink}`,
+        }));
+    }
+
+    function renderHN(items) {
+      const el = document.getElementById('hn-list');
+      if (!items.length) {
+        el.innerHTML = '<div class="empty">No AI stories in the last 24 hours.</div>';
+        return;
+      }
+      el.innerHTML = items.map(i => `
+        <div class="card">
+          <a class="title" href="${escapeHtml(i.url)}" target="_blank" rel="noopener">${escapeHtml(i.title)}</a>
+          <div class="meta">
+            <span>▲ ${i.points}</span>
+            <span class="dot">·</span>
+            <a href="${escapeHtml(i.hnUrl)}" target="_blank" rel="noopener">${i.comments} comments</a>
+            <span class="dot">·</span>
+            <span>${timeAgo(i.created)}</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderReddit(items) {
+      const el = document.getElementById('reddit-list');
+      if (!items.length) {
+        el.innerHTML = '<div class="empty">No posts available.</div>';
+        return;
+      }
+      el.innerHTML = items.map(i => `
+        <div class="card">
+          <a class="title" href="${escapeHtml(i.url)}" target="_blank" rel="noopener">${escapeHtml(i.title)}</a>
+          <div class="meta">
+            ${i.flair ? `<span class="badge">${escapeHtml(i.flair)}</span>` : ''}
+            <span>▲ ${i.score}</span>
+            <span class="dot">·</span>
+            <a href="${escapeHtml(i.permalink)}" target="_blank" rel="noopener">${i.comments} comments</a>
+            <span class="dot">·</span>
+            <span>${timeAgo(i.created)}</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderError(elId, msg) {
+      document.getElementById(elId).innerHTML =
+        `<div class="error">Couldn't load: ${escapeHtml(msg)}</div>`;
+    }
+
+    function saveCache(hn, reddit) {
+      try {
+        localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), hn, reddit }));
+      } catch {}
+    }
+
+    function loadCache() {
+      try {
+        const raw = localStorage.getItem(CACHE_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (Date.now() - parsed.ts > CACHE_TTL_MS) return null;
+        return parsed;
+      } catch { return null; }
+    }
+
+    async function loadAll(force = false) {
+      document.getElementById('today-date').textContent = formatDate(new Date());
+      const btn = document.getElementById('refresh-btn');
+
+      if (!force) {
+        const cached = loadCache();
+        if (cached) {
+          renderHN(cached.hn);
+          renderReddit(cached.reddit);
+          document.getElementById('last-updated').textContent =
+            `Cached · updated ${timeAgo(Math.floor(cached.ts / 1000))}`;
+          return;
+        }
+      }
+
+      btn.classList.add('spinning');
+      showSkeleton('hn-list', 5);
+      showSkeleton('reddit-list', 5);
+
+      const [hnRes, redditRes] = await Promise.allSettled([fetchHN(), fetchReddit()]);
+
+      let hn = [], reddit = [];
+      if (hnRes.status === 'fulfilled') { hn = hnRes.value; renderHN(hn); }
+      else renderError('hn-list', hnRes.reason?.message || 'network error');
+
+      if (redditRes.status === 'fulfilled') { reddit = redditRes.value; renderReddit(reddit); }
+      else renderError('reddit-list', redditRes.reason?.message || 'network error');
+
+      if (hn.length || reddit.length) saveCache(hn, reddit);
+
+      document.getElementById('last-updated').textContent =
+        `Updated ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+      btn.classList.remove('spinning');
+    }
+
+    loadAll();
+  </script>
 </body>
 </html>
